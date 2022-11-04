@@ -9,6 +9,7 @@ from io import StringIO
 from tqdm import tqdm
 from openpyxl.utils.dataframe import dataframe_to_rows
 from functools import reduce
+import re
 
 ## clustering function to cluster all sequences in input fasta with given pct_id
 def otu_clustering(project = None, comp_lvl = None, cores = None, pct_id = None):
@@ -32,11 +33,11 @@ def otu_clustering(project = None, comp_lvl = None, cores = None, pct_id = None)
     ## write stdout to uncompressed output at runtime
     with open(output_path.with_suffix(''), 'w') as output:
         f = subprocess.run(['vsearch',
-                            '--cluster_size', Path(project).joinpath('6_dereplication_pooling', 'data', 'pooling', 'pooled_sequences_dereplicated.fasta.gz'),
+                            '--cluster_size', str(Path(project).joinpath('6_dereplication_pooling', 'data', 'pooling', 'pooled_sequences_dereplicated.fasta.gz')),
                             '--id', str(pct_id / 100),
                             '--sizein', '--sizeout', '--relabel', 'OTU_',
                             '--centroids', '-', '--fasta_width', str(0), '--quiet',
-                            '--log', Path(project).joinpath('7_otu_clustering', 'temp', 'clustering_log.txt'),
+                            '--log', str(Path(project).joinpath('7_otu_clustering', 'temp', 'clustering_log.txt')),
                             '--threads', str(cores)], stdout = output)
 
     ## compress the output, remove uncompressed output
@@ -46,9 +47,11 @@ def otu_clustering(project = None, comp_lvl = None, cores = None, pct_id = None)
 
     ## collect processed and passed reads from the log file
     with open(Path(project).joinpath('7_otu_clustering', 'temp', 'clustering_log.txt')) as log_file:
-        content = log_file.read().split('\n')
-        seqs, clusters = content[3].split(' ')[3], content[16].split(' ')[1]
-        version = content[0].split(',')[0]
+        content = log_file.read()
+        seqs = re.search(r'(\d+)(?= sequences)', content).group(0)
+        clusters = re.search(r'(?<=Clusters: )(\d+)', content).group(0)
+        version = re.search(r'[^,]*', content).group(0)
+        
         finished = '{}'.format(datetime.datetime.now().strftime("%d-%m-%Y %H:%M:%S"))
 
     print('{}: Clustered unique {} sequences into {} OTUs.'.format(datetime.datetime.now().strftime("%H:%M:%S"), seqs, clusters))
@@ -56,9 +59,9 @@ def otu_clustering(project = None, comp_lvl = None, cores = None, pct_id = None)
 
     ## run vsearch --uchime_denovo to remove chimeric sequences from the OTUs
     f = subprocess.run(['vsearch',
-                        '--uchime_denovo', Path(project).joinpath('7_otu_clustering', 'data', sample_name_out_1),
+                        '--uchime_denovo', str(Path(project).joinpath('7_otu_clustering', 'data', sample_name_out_1)),
                         '--relabel', 'OTU_',
-                        '--nonchimeras', Path(project).joinpath('7_otu_clustering', '{}_OTUs.fasta'.format(Path(project).stem)),
+                        '--nonchimeras', str(Path(project).joinpath('7_otu_clustering', '{}_OTUs.fasta'.format(Path(project).stem))),
                         '-fasta_width', str(0), '--quiet'])
 
     ## collect processed and passed reads from the output fasta, since it is not reported in the log
@@ -77,13 +80,13 @@ def remapping(file, project = None, pct_id = None):
     ## run vsearch --usearch_global to remap the individual files vs the generated
     ## OTU fasta, capture log and directly pickle the output as dataframe for read table generation
     f = subprocess.run(['vsearch',
-                        '--usearch_global', Path(file),
-                        '--db', Path(project).joinpath('7_otu_clustering', '{}_OTUs.fasta'.format(Path(project).stem)),
+                        '--usearch_global', str(Path(file)),
+                        '--db', str(Path(project).joinpath('7_otu_clustering', '{}_OTUs.fasta'.format(Path(project).stem))),
                         '--id', str(pct_id / 100),
                         '--output_no_hits',
                         '--maxhits', '1',
                         '--otutabout', '-', '--quiet', '--threads', str(1),
-                        '--log', Path(project).joinpath('7_otu_clustering', 'temp', '{}_mapping_log.txt'.format(sample_name_out))], capture_output = True)
+                        '--log', str(Path(project).joinpath('7_otu_clustering', 'temp', '{}_mapping_log.txt'.format(sample_name_out)))], capture_output = True)
 
     ## directly parse the output to a pandas dataframe
     otu_tab = pd.read_csv(StringIO(f.stdout.decode('ascii', errors = 'ignore')), sep = '\t')

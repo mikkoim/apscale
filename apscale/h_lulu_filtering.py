@@ -45,8 +45,8 @@ def generate_matchfile(project = None, file = None, cores = None, comp_lvl = Non
     ## generate the files with vsearch
     with open(output_path.with_suffix(''), 'w') as output:
         f = subprocess.run(['vsearch',
-                            '--usearch_global', file,
-                            '--db', file,
+                            '--usearch_global', str(file),
+                            '--db', str(file),
                             '--self',
                             '--id', str(min_sim / 100),
                             '--iddef', str(1),
@@ -55,7 +55,7 @@ def generate_matchfile(project = None, file = None, cores = None, comp_lvl = Non
                             '--maxaccepts', str(0),
                             '--query_cov', str(0.9),
                             '--quiet',
-                            '--log', log_path,
+                            '--log', str(log_path),
                             '--threads', str(cores),
                             '--maxhits', str(10)], stdout = output)
 

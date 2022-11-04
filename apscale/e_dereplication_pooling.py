@@ -19,9 +19,9 @@ def dereplication(file, project = None, comp_lvl = None, min_size = None):
     ## write stdout to uncompressed output at runtime
     with open(output_path.with_suffix(''), 'w') as output:
         f = subprocess.run(['vsearch',
-                            '--fastx_uniques', Path(file),
+                            '--fastx_uniques', str(Path(file)),
                             '--fastaout', '-', '--quiet', '--fasta_width', str(0),
-                            '--log', Path(project).joinpath('6_dereplication_pooling', 'temp', '{}.txt'.format(sample_name_out)),
+                            '--log', str(Path(project).joinpath('6_dereplication_pooling', 'temp', '{}.txt'.format(sample_name_out))),
                             '--sizeout', '--relabel', 'seq:'], stdout = output)
 
     ## compress the output, remove uncompressed output
@@ -36,9 +36,9 @@ def dereplication(file, project = None, comp_lvl = None, min_size = None):
 
         with open(output_path.with_suffix(''), 'w') as output:
             f = subprocess.run(['vsearch',
-                                '--fastx_uniques', Path(file),
+                                '--fastx_uniques', str(Path(file)),
                                 '--fastaout', '-', '--quiet', '--fasta_width', str(0),
-                                '--log', Path(project).joinpath('6_dereplication_pooling', 'temp', '{}.txt'.format(sample_name_out)),
+                                '--log', str(Path(project).joinpath('6_dereplication_pooling', 'temp', '{}.txt'.format(sample_name_out))),
                                 '--sizeout', '--relabel', 'seq:',
                                 '--minuniquesize', str(min_size)], stdout = output)
 
@@ -88,7 +88,7 @@ def pooling(file_list, project = None, comp_lvl = None, min_size = None):
 
     with open(output_path.with_suffix(''), 'w') as output:
         f = subprocess.run(['vsearch',
-                            '--fastx_uniques', Path(project).joinpath('6_dereplication_pooling', 'data', 'pooling', 'pooled_sequences.fasta.gz'),
+                            '--fastx_uniques', str(Path(project).joinpath('6_dereplication_pooling', 'data', 'pooling', 'pooled_sequences.fasta.gz')),
                             '--fastaout', '-', '--quiet', '--fasta_width', str(0),
                             '--sizein', '--sizeout',
                             '--minuniquesize', str(2)], stdout = output)

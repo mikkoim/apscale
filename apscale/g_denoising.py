@@ -8,6 +8,7 @@ from io import StringIO
 from tqdm import tqdm
 from openpyxl.utils.dataframe import dataframe_to_rows
 from functools import reduce
+import re
 
 ## denoising function to denoise all sequences the input fasta with a given alpha and minsize
 def denoise(project = None, comp_lvl = None, cores = None, alpha = None, minsize = None):
@@ -31,12 +32,12 @@ def denoise(project = None, comp_lvl = None, cores = None, alpha = None, minsize
     ## write stdout to uncompressed output at runtime
     with open(output_path.with_suffix(''), 'w') as output:
         f = subprocess.run(['vsearch',
-                            '--cluster_unoise', Path(project).joinpath('6_dereplication_pooling', 'data', 'pooling', 'pooled_sequences_dereplicated.fasta.gz'),
+                            '--cluster_unoise', str(Path(project).joinpath('6_dereplication_pooling', 'data', 'pooling', 'pooled_sequences_dereplicated.fasta.gz')),
                             '--unoise_alpha', str(alpha),
                             '--minsize', str(minsize),
                             '--sizein', '--sizeout',
                             '--centroids', '-', '--fasta_width', str(0), '--quiet',
-                            '--log', Path(project).joinpath('8_denoising', 'temp', 'denoising_log.txt'),
+                            '--log', str(Path(project).joinpath('8_denoising', 'temp', 'denoising_log.txt')),
                             '--threads', str(cores)], stdout = output, stderr = subprocess.DEVNULL)
 
     ## compress the output, remove uncompressed output
@@ -46,9 +47,11 @@ def denoise(project = None, comp_lvl = None, cores = None, alpha = None, minsize
 
     ## collect processed and passed reads from the log file
     with open(Path(project).joinpath('8_denoising', 'temp', 'denoising_log.txt')) as log_file:
-        content = log_file.read().split('\n')
-        seqs, esvs = content[3].split(' ')[3], content[17].split(' ')[1]
-        version = content[0].split(',')[0]
+        content = log_file.read()
+        seqs = re.search(r'(\d+)(?= seqs)', content).group(0)
+        esvs = re.search(r'(?<=Clusters: )(\d+)', content).group(0)
+        version = re.search(r'[^,]*', content).group(0)
+
         finished = '{}'.format(datetime.datetime.now().strftime("%d-%m-%Y %H:%M:%S"))
 
     print('{}: Denoised unique {} sequences into {} ESVs.'.format(datetime.datetime.now().strftime("%H:%M:%S"), seqs, esvs))
@@ -56,9 +59,9 @@ def denoise(project = None, comp_lvl = None, cores = None, alpha = None, minsize
 
     ## run vsearch --uchime_denovo to remove chimeric sequences from the OTUs
     f = subprocess.run(['vsearch',
-                        '--uchime_denovo', Path(project).joinpath('8_denoising', 'data', sample_name_out_1),
+                        '--uchime_denovo', str(Path(project).joinpath('8_denoising', 'data', sample_name_out_1)),
                         '--relabel', 'ESV_',
-                        '--nonchimeras', Path(project).joinpath('8_denoising', '{}_ESVs.fasta'.format(Path(project).stem)),
+                        '--nonchimeras', str(Path(project).joinpath('8_denoising', '{}_ESVs.fasta'.format(Path(project).stem))),
                         '-fasta_width', str(0), '--quiet'])
 
     ## collect processed and passed reads from the output fasta, since it is not reported in the log
@@ -77,12 +80,12 @@ def remapping_esv(file, project = None):
     ## run vsearch --search_exact to remap the individual files vs the generated
     ## ESV fasta, capture log and directly pickle the output as dataframe for read table generation
     f = subprocess.run(['vsearch',
-                        '--search_exact', Path(file),
-                        '--db', Path(project).joinpath('8_denoising', '{}_ESVs.fasta'.format(Path(project).stem)),
+                        '--search_exact', str(Path(file)),
+                        '--db', str(Path(project).joinpath('8_denoising', '{}_ESVs.fasta'.format(Path(project).stem))),
                         '--output_no_hits',
                         '--maxhits', '1',
                         '--otutabout', '-', '--quiet', '--threads', str(1),
-                        '--log', Path(project).joinpath('8_denoising', 'temp', '{}_mapping_log.txt'.format(sample_name_out))], capture_output = True)
+                        '--log', str(Path(project).joinpath('8_denoising', 'temp', '{}_mapping_log.txt'.format(sample_name_out)))], capture_output = True)
 
     ## directly parse the output to a pandas dataframe
     esv_tab = pd.read_csv(StringIO(f.stdout.decode('ascii', errors = 'ignore')), sep = '\t')
@@ -95,9 +98,12 @@ def remapping_esv(file, project = None):
 
     ## collect number of esvs from the output, pickle to logs
     with open(Path(project).joinpath('8_denoising', 'temp', '{}_mapping_log.txt'.format(sample_name_out))) as log_file:
-        content = log_file.read().split('\n')
-        esvs, exact_matches = content[3].split(' ')[3], len(esv_tab)
-        version = content[0].split(',')[0]
+        content = log_file.read()
+        esvs = re.search(r'(?<=sequences: )(\d+)', content).group(0)
+        version = re.search(r'[^,]*', content).group(0)
+
+        exact_matches = len(esv_tab)
+
         finished = '{}'.format(datetime.datetime.now().strftime("%d-%m-%Y %H:%M:%S"))
 
     ## give user output

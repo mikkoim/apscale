@@ -19,8 +19,8 @@ def pe_merge(file_pair, project = None, comp_lvl = None, maxdiffpct = None, maxd
     with open(output_path.with_suffix(''), 'w') as output, open(log_path, 'w') as log:
         ## run vsearch --fastq_mergepairs to merge the file pair
         f = subprocess.run(['vsearch',
-                            '--fastq_mergepairs', Path(file_pair[0]),
-                            '--reverse', Path(file_pair[1]),
+                            '--fastq_mergepairs', str(Path(file_pair[0])),
+                            '--reverse', str(Path(file_pair[1])),
                             '--fastqout', '-', '--quiet',
                             '--fastq_maxdiffpct', str(maxdiffpct),
                             '--fastq_maxdiffs', str(maxdiffs),

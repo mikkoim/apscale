@@ -18,9 +18,9 @@ def quality_filtering(file, project = None, comp_lvl = None, maxee = None, min_l
     # write stdout to uncompressed output at runtime, write stderr to a log file
     with open(output_path.with_suffix(''), 'w') as output:
         f = subprocess.run(['vsearch',
-                            '--fastq_filter', Path(file),
+                            '--fastq_filter', str(Path(file)),
                             '--fastaout', '-', '--quiet', '--fasta_width', str(0),
-                            '--log', Path(project).joinpath('5_quality_filtering', 'temp', '{}.txt'.format(sample_name_out)),
+                            '--log', str(Path(project).joinpath('5_quality_filtering', 'temp', '{}.txt'.format(sample_name_out))),
                             '--fastq_maxee', str(maxee),
                             '--fastq_minlen', str(min_length),
                             '--fastq_maxlen', str(max_length),
